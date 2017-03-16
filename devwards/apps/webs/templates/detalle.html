@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+	<!--<header class="head">
+		<div class="background-white">
+			<div class="container">
+				<div class="head__one  row between middle">
+					<span class="head__one__item">
+						Los premios para el diseño, la creatividad y la innovación en Internet
+					</span>
+					<ul class="row middle">
+						<li class="head__one__item">
+							<a class="head__one__item-a">¿Eres miembro?</a>
+						</li>
+						<li class="head__one__item ">
+							<a class="head__one__item-a head__one__item-a--bold" href="">Registrar / Iniciar sesión</a>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		<div class="background-gray border__bottom-gray shadow__menu">
+			<div class="container">
+				<div class="head__two row between middle">
+					<span class="head__two__item--logo">devwards</span>
+					<ul class="row middle">
+						<li class="head__two__item">
+							<a class="head__two__item-a" href="">home</a>
+						</li>
+						<li class="head__two__item">
+							<a class="head__two__item-a" href="">nosotros</a>
+						</li>
+						<li class="head__two__item">
+							<a class="head__two__item-a head__two__item-a--button" href="">enviar tu sitio</a>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</header>-->
+	{% block content %}
+	<header class="head-login">
+		<div class="background-gray border__bottom-gray shadow__menu">
+			<div class="container">
+				<div class="head__two row between middle">
+					<span class="head__two__item--logo">devwards</span>
+					<ul class="row middle">
+						<li class="head__two__item">
+							<a class="head__two__item-a" href="">home</a>
+						</li>
+						<li class="head__two__item">
+							<a class="head__two__item-a" href="">nosotros</a>
+						</li>
+						<li class="head__two__item">
+							<a class="head__two__item-a head__two__item-a--user">JulioGrados</a>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</header>
+	<section class="background-gray">
+		<div class="container--1000">
+			<article class="site__detail--main row middle between">
+				<div class="site__detail--main__left">
+					<span>{{website.create_at| date:"l j F"}}</span>
+					<h2>{{website.name}}</h2>
+					<p>By <strong>{{website.designer}}</strong></p>
+					<p class="site__detail--main__left-description">{{website.description}}</p>
+				</div>
+				<div class="site__detail--main__rigth row column">
+					<div class="site__detail--main__rigth-vote row column center">
+						<a class="site__button" href="{% url 'webs:website_vote' website.slug %}">Votar ahora</a>
+					</div>
+					<div class="site__main-section--notes row middle between">
+						<div class="site__main-section--notes--item row column">
+							<canvas class="site__main-section--notes-circle" id="myChart1" width="50" height="50"></canvas>
+							<span class="site__main-section--notes--item__percent">7.90</span>
+							<p class="site__main-section--notes--item__name">Diseño</p>
+						</div>
+						<div class="site__main-section--notes--item row column">
+							<canvas class="site__main-section--notes-circle" id="myChart2" width="180" height="180"></canvas>
+							<span class="site__main-section--notes--item__percent">7.90</span>
+							<p class="site__main-section--notes--item__name">Usabilidad</p>
+						</div>
+						<div class="site__main-section--notes--item row column">
+							<canvas class="site__main-section--notes-circle" id="myChart3" width="180" height="180"></canvas>
+							<span class="site__main-section--notes--item__percent">7.90</span>
+							<p class="site__main-section--notes--item__name">Creatividad</p>
+						</div>
+						<div class="site__main-section--notes--item row column">
+							<canvas class="site__main-section--notes-circle" id="myChart4" width="180" height="180"></canvas>
+							<span class="site__main-section--notes--item__percent">7.90</span>
+							<p class="site__main-section--notes--item__name">Contenido</p>
+						</div>
+					</div>
+				</div>
+			</article>
+			<article class=static"site__detail--images">
+				<img class=static"site__detail--images__figure" src="{{ website.image1.url }}" alt="">
+				<img class="site__detail--images__figure" src="{{ website.image2.url }}" alt="">
+				{% if website.image3.url != null  %}
+					<img class=static"site__detail--images__figure" src="{{ website.image3.url }}" alt="">
+				{% endif %}
+
+			</article>
+			<article class="site__detail--authors row middle between">
+				<div class="site__detail--author row column">
+					<div class="row middle">
+						<figure class="site__detail--author__figure">
+							<img src="{% static 'img/persona1.jpg' %}" alt="">
+						</figure>
+						<div class="site__detail--author__name row column">
+							<h4>Juan Jose Pino</h4>
+							<span>dcamilleri.com</span>
+						</div>
+					</div>
+					<p class="site__detail--author__description">Front-end Developer at Firstborn. JavaScript developer @wisembly and @Get_Solid.</p>
+				</div>
+				<div class="site__detail--author row column">
+					<div class="row middle">
+						<figure class="site__detail--author__figure">
+							<img src="{% static 'img/persona1.jpg' %}" alt="">
+						</figure>
+						<div class="site__detail--author__name row column">
+							<h4>Juan Jose Pino</h4>
+							<span>dcamilleri.com</span>
+						</div>
+					</div>
+					<p class="site__detail--author__description">Front-end Developer at Firstborn. JavaScript developer @wisembly and @Get_Solid.</p>
+				</div>
+				<div class="site__detail--author row column">
+					<div class="row middle">
+						<figure class="site__detail--author__figure">
+							<img src="{% static 'img/persona1.jpg' %}" alt="">
+						</figure>
+						<div class="site__detail--author__name row column">
+							<h4>Juan Jose Pino</h4>
+							<span>dcamilleri.com</span>
+						</div>
+					</div>
+					<p class="site__detail--author__description">Front-end Developer at Firstborn. JavaScript developer @wisembly and @Get_Solid.</p>
+				</div>
+			</article>
+		</div>
+	</section>
+	<footer class="footer">
+		<div class="background-white">
+			<span class="footer-icon icon-twitter"></span>
+			<span class="footer-icon icon-facebook"></span>
+			<span class="footer-icon footer-icon--heart icon-heart"></span>
+			<span class="footer-icon icon-google-plus"></span>
+			<span class="footer-icon icon-vimeo"></span>
+		</div>
+	</footer>
+	{% block script %}
+		<script>
+			var data1 = [
+				{
+					value: 90,
+					color: "#3673D9"
+				},
+				{
+					value: 10,
+					color: "#0095FF"
+				}
+			];
+			var data2 = [
+				{
+					value: 90,
+					color: "#D0021B"
+				},
+				{
+					value: 10,
+					color: "#0095FF"
+				}
+			];
+			var data3 = [
+				{
+					value: 90,
+					color: "#F5A623"
+				},
+				{
+					value: 10,
+					color: "#0095FF"
+				}
+			];
+
+			var data4 = [
+				{
+					value: 90,
+					color: "#7ED321"
+				},
+				{
+					value: 10,
+					color: "#0095FF"
+				}
+			];
+
+			var options = {
+				responsive: true,
+				animation: false,
+				percentageInnerCutout : 75
+			};
+
+			var c1 = $('#myChart1');
+			var c2 = $('#myChart2');
+			var c3 = $('#myChart3');
+			var c4 = $('#myChart4');
+
+			var ct1 = c1.get(0).getContext('2d');
+			var ct2 = c2.get(0).getContext('2d');
+			var ct3 = c3.get(0).getContext('2d');
+			var ct4 = c4.get(0).getContext('2d');
+
+			var ctx1 = document.getElementById("myChart1").getContext("2d");
+			myNewChart1 = new Chart(ct1).Doughnut(data1, options);
+
+			var ctx2 = document.getElementById("myChart2").getContext("2d");
+			myNewChart2 = new Chart(ct2).Doughnut(data2, options);
+
+			var ctx3 = document.getElementById("myChart3").getContext("2d");
+			myNewChart3 = new Chart(ct3).Doughnut(data3, options);
+
+			var ctx4 = document.getElementById("myChart4").getContext("2d");
+			myNewChart4 = new Chart(ct4).Doughnut(data4, options);
+		</script>
+	{% endblock script %}
+{% endblock content %}

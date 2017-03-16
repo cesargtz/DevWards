@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block content %}
+	<header class="head">
+		<div class="background-white">
+			<div class="container">
+				<div class="head__one  row between middle">
+					<span class="head__one__item">
+						Los premios para el diseño, la creatividad y la innovación en Internet
+					</span>
+					<ul class="row middle">
+						<li class="head__one__item">
+							<a class="head__one__item-a">¿Eres miembro?</a>
+						</li>
+						<li class="head__one__item ">
+							<a class="head__one__item-a head__one__item-a--bold" href="">Registrar / Iniciar sesión</a>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		<div class="background-gray border__bottom-gray shadow__menu">
+			<div class="container">
+				<div class="head__two row between middle">
+					<span class="head__two__item--logo">devwards</span>
+					<ul class="row middle">
+						<li class="head__two__item">
+							<a class="head__two__item-a" href="">home</a>
+						</li>
+						<li class="head__two__item">
+							<a class="head__two__item-a" href="">nosotros</a>
+						</li>
+						<li class="head__two__item">
+							<a class="head__two__item-a head__two__item-a--button" href="">enviar tu sitio</a>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</header>
+	<section class="background-gray">
+		<div class="container--800">
+			<div class="site__register row column">
+				<h1>Envió del sitio web</h1>
+				<form class="site__form background-white" method="POST" enctype="multipart/form-data"> <!-- el enctype es para mandar varias imagenes en el form -->
+					{% csrf_token %}
+					<div class="site__form__input">
+						<div class="site__form__input-input row middle between">
+							<div class="site__form__input-input__name">
+								<label>Nombre del sitio</label>
+							</div>
+							<div class="site__form__input-input__text">
+								{{form.name}}
+								{{form.name.errors}}
+							</div>
+						</div>
+						<div class="site__form__input-input row middle between">
+							<div class="site__form__input-input__name">
+								<label>Url</label>
+							</div>
+							<div class="site__form__input-input__text">
+								{{form.url}}
+								{{form.url.errors}}
+							</div>
+						</div>
+						<div class="site__form__input-input row middle between">
+							<div class="site__form__input-input__name">
+								<label>Descripción</label>
+							</div>
+							<div class="site__form__input-input__text">
+								{{form.description}}
+								{{form.description.errors}}
+							</div>
+						</div>
+						<div class="site__form__input-input row middle between">
+							<div class="site__form__input-input__name">
+								<label>Diseñado por</label>
+							</div>
+							<div class="site__form__input-input__text">
+								{{form.designer}}
+								{{form.designer.errors}}
+							</div>
+						</div>
+						<div class="site__form__input-input row middle between">
+							<div class="site__form__input-input__name">
+								<label>Diseñador url</label>
+							</div>
+							<div class="site__form__input-input__text">
+								{{form.designer_url}}
+								{{form.designer_url.errors}}
+							</div>
+						</div>
+						<div class="site__form__input-input row middle between">
+							<div class="site__form__input-input__name">
+								<label>Twitter</label>
+							</div>
+							<div class="site__form__input-input__text">
+								{{form.twitter}}
+								{{form.twitter.urls}}
+							</div>
+						</div>
+						<div class="site__form__input-input row middle between">
+							<div class="site__form__input-input__name">
+								<label>Imagen Sitio 1</label>
+							</div>
+							<div class="site__form__input-input__text">
+								{{form.image1}}
+								{{form.image1.erros}}
+							</div>
+						</div>
+						<div class="site__form__input-input row middle between">
+							<div class="site__form__input-input__name">
+								<label>Imagen Sitio 2</label>
+							</div>
+							<div class="site__form__input-input__text">
+								{{form.image2}}
+								{{form.image2.erros}}
+							</div>
+						</div>
+						<div class="site__form__input-input row middle between">
+							<div class="site__form__input-input__name">
+								<label>Imagen Sitio 3</label>
+							</div>
+							<div class="site__form__input-input__text">
+								{{form.image3}}
+								{{form.image3.erros}}
+							</div>
+						</div>
+					</div>
+					<div class="site__form__colaborate row middle between">
+						<!-- <span id="js-colaborate" class="site__form__colaborate__new">Colaborador</span> -->
+						<!-- <span class="site__form__colaborate__cancel">Cancelar</span> -->
+						<input type="submit" value="Enviar">
+					</div>
+					<div id="js-section-colaborate">
+
+					</div>
+
+				</form>
+			</div>
+		</div>
+	</section>
+	<footer class="footer">
+		<div class="background-white">
+			<span class="footer-icon icon-twitter"></span>
+			<span class="footer-icon icon-facebook"></span>
+			<span class="footer-icon footer-icon--heart icon-heart"></span>
+			<span class="footer-icon icon-google-plus"></span>
+			<span class="footer-icon icon-vimeo"></span>
+		</div>
+	</footer>
+	{% block script %}
+		<script>
+			var count = 0;
+			$(document).ready( function(){
+				$('#js-colaborate').click( function(){
+					count ++;
+					$('#js-section-colaborate').append(
+						'<form class="site__form background-white">' +
+							'<div class="site__form__input">' +
+								'<div class="site__form__input-input row middle between">' +
+									'<div class="site__form__input-input__name">' +
+										'<label>' + 'Diseñador ' + count +'</label>' +
+									'</div>' +
+									'<div class="site__form__input-input__text">' +
+										'<input type="text" placeholder="Diseñador">' +
+									'</div>' +
+								'</div>' +
+								'<div class="site__form__input-input row middle between">' +
+									'<div class="site__form__input-input__name">' +
+										'<label>Diseñador url</label>' +
+									'</div>' +
+									'<div class="site__form__input-input__text">' +
+										'<input type="text" placeholder="Diseñador url">' +
+									'</div>' +
+								'</div>' +
+								'<div class="site__form__input-input row middle between">' +
+									'<div class="site__form__input-input__name">' +
+										'<label>Twitter</label>' +
+									'</div>' +
+									'<div class="site__form__input-input__text">' +
+										'<input type="text" placeholder="Twitter">' +
+									'</div>' +
+								'</div>' +
+							'</div>' +
+						'</form>');
+				});
+			});
+		</script>
+	{% endblock script %}
+{% endblock content %}

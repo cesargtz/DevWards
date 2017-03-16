@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Registrar{% endblock title %}
+{% block content %}
+	<header class="head">
+		<div class="background-white">
+			<div class="container">
+				<div class="head__one  row between middle">
+					<span class="head__one__item">
+						Los premios para el diseño, la creatividad y la innovación en Internet
+					</span>
+					<ul class="row middle">
+						<li class="head__one__item">
+							<a class="head__one__item-a">¿Eres miembro?</a>
+						</li>
+						<li class="head__one__item ">
+							{% block reg/log %}
+								{{ block.super }}
+							{% endblock reg/log %}
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		<div class="background-gray border__bottom-gray shadow__menu">
+			<div class="container">
+				<div class="head__two row between middle">
+					<span class="head__two__item--logo">devwards</span>
+					<ul class="row middle">
+						<li class="head__two__item">
+							<a class="head__two__item-a" href="">home</a>
+						</li>
+						<li class="head__two__item">
+							<a class="head__two__item-a" href="">nosotros</a>
+						</li>
+						<li class="head__two__item">
+							<a class="head__two__item-a head__two__item-a--button" href="">enviar tu sitio</a>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</header>
+	<section class="background-gray">
+		<div class="container--600">
+			<div class="site__register row column">
+				<h1>Registro</h1>
+				<div class="site__register__button row middle between">
+					<a class="site__register__button-fb" href="">
+						Registro con Facebook
+					</a>
+					<a class="site__register__button-tw" href="">
+						Registro con Twitter
+					</a>
+				</div>
+				<p><i>o create una cuenta con tu e-mail y username</i></p>
+				<form class="site__form background-white" method="POST">
+					{% csrf_token %}
+					<div class="site__form__input">
+						{{ form.username }}
+							{{ form.username.errors }}
+						{{ form.email }}
+							{{ form.email.errors }}
+						{{ form.password }}
+							{{ form.password.errors }}
+						<input type="submit" value="Enviar">
+					</div>
+				</form>
+				<p class="site__register__link">¿Ya eres miembro? <a href="">Ingresar ahora</a></p>
+			</div>
+		</div>
+	</section>
+	<footer class="footer">
+		<div class="background-white">
+			<span class="footer-icon icon-twitter"></span>
+			<span class="footer-icon icon-facebook"></span>
+			<span class="footer-icon footer-icon--heart icon-heart"></span>
+			<span class="footer-icon icon-google-plus"></span>
+			<span class="footer-icon icon-vimeo"></span>
+		</div>
+	</footer>
+{% endblock content %}

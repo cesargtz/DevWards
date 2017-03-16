@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+    	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{% block title %}{% endblock title %}</title>
+        {% load static from staticfiles %}  {#  Esto cargara los archivos estaricos como js, css o imgs#}
+            <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+            <link rel="stylesheet" href="{% static 'css/main.css' %}">
+            <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700,300' rel='stylesheet' type='text/css'>
+    </head>
+    <body>
+        {% block reg/log %}
+            <a class="head__one__item-a head__one__item-a--bold" href="{% url 'users:register' %}">Registrar</a>
+            <a class="head__one__item-a head__one__item-a--bold" href="{% url 'users:login' %}">Iniciar sesión</a>
+        {% endblock reg/log %}
+        {% block content %}{% endblock content %}
+        <script src="{% static 'js/vendor/jquery.js' %}"></script>
+        <script src= "{% static 'js/vendor/chart.js' %}"></script>
+        {% block script %}{% endblock script %}
+    </body>
+</html>
