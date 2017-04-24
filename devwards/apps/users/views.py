@@ -66,7 +66,10 @@ def UserOdooResponse(request):
         domain = [('mobile','=',req['mobile'])]
         method_name = 'search_read'
         user_odoo = call(model, method_name, domain, ['mobile','fax'])
-        if req['pass'] == user_odoo['fax']:
+
+        if req['pass'] == user_odoo[0]['fax']:
+            user_odoo.append({'issucess':True})
             return HttpResponse(json.dumps(user_odoo))
         else:
-            return HttpResponse(json.dumps("Contraseña Incorrecta"))
+            user_odoo = {"issucess":False, "message":"Contrasena incorrecta"}
+            return HttpResponse(json.dumps(user_odoo))
