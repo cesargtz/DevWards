@@ -4,8 +4,13 @@ from .forms import LoginForm, RegisterForm
 from django.core.urlresolvers import reverse_lazy, reverse # Esto nos permitira redireccionar las urls con  namespace y names
 from django.contrib.auth import login, authenticate, logout  # Para logearnos
 from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.renderers import JSONRenderer
+from rest_framework.parsers import JSONParser
+import json
 import functools
 import xmlrpc.client
+
 
 class LogoutView(View):
 
@@ -39,36 +44,26 @@ class LoginView(FormView):
         login(self.request, user)
         return super(LoginView, self).form_valid(form)
 
+@csrf_exempt
 def UserOdooResponse(request):
     HOST = '54.187.237.193'
     PORT = 8069
-    DB = 'productiva2'
+    DB = 'sandbox'
     USER = 'admin'
-    PASS = 'admingys'
+    PASS = '1'
     ROOT = 'http://%s:%d/xmlrpc/' % (HOST,PORT)
 
+    if request.method == 'POST':
 
-    uid = xmlrpc.client.ServerProxy(ROOT + 'common').login(DB,USER,PASS)
-    # Enable functions of the OdORM
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(ROOT + 'object').execute,
-        DB, uid, PASS)
-    model = 'res.partner'
-    domain = ['|',('mobile','=','652 103 8859'),('mobile','=','625 101 1187')]
-    method_name = 'search_read'
-    user_odoo = call(model, method_name, domain, ['mobile','curp'])
-    return HttpResponse("Usuario: %s" % (user_odoo))
+        req = json.loads( request.body.decode('utf-8') )
 
-
-
-
-    # uid = xmlrpc.client.ServerProxy(ROOT + 'common').login(DB,USER,PASS)
-    # # Enable functions of the OdORM
-    # call = functools.partial(
-    #     xmlrpc.client.ServerProxy(ROOT + 'object').execute,
-    #     DB, uid, PASS)
-    # model = 'res.partner'
-    # domain = ['vat', '=','MXBAUA800729EM7']
-    # method_name = 'search_read'
-    # user_odoo = call(model, method_name, domain, ['name','curp'])
-    # return JsonResponse("Usuario: %s" % (user_odoo))
+        uid = xmlrpc.client.ServerProxy(ROOT + 'common').login(DB,USER,PASS)
+        # Enable functions of the OdORM
+        call = functools.partial(
+            xmlrpc.client.ServerProxy(ROOT + 'object').execute,
+            DB, uid, PASS)
+        model = 'res.partner'
+        domain = [(req['mobile'],'=',mobile)]
+        method_name = 'search_read'
+        user_odoo = call(model, method_name, domain, ['mobile','fax'])
+        return HttpResponse(json.dumps(user_odoo))
