@@ -63,7 +63,10 @@ def UserOdooResponse(request):
             xmlrpc.client.ServerProxy(ROOT + 'object').execute,
             DB, uid, PASS)
         model = 'res.partner'
-        domain = [(req['mobile'],'=',mobile)]
+        domain = [('mobile','=',req['mobile'])]
         method_name = 'search_read'
         user_odoo = call(model, method_name, domain, ['mobile','fax'])
-        return HttpResponse(json.dumps(user_odoo))
+        if req['pass'] == user_odoo['fax']:
+            return HttpResponse(json.dumps(user_odoo))
+        else:
+            return HttpResponse(json.dumps("Contraseña Incorrecta"))
