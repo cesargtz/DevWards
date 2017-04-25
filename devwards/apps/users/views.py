@@ -68,9 +68,6 @@ def UserOdooResponse(request):
         user_odoo = call(model, method_name, domain, ['mobile','fax'])
 
         if req['fax'] == user_odoo[0]['fax']:
-            request_user = {"response":[{"request":True, "message":"200"}],"result":user_odoo}
-            # user_odoo.append({'issucess':True})
-            return HttpResponse(json.dumps(request_user))
+            return HttpResponse(json.dumps(user_odoo))
         else:
-            request_user = {"response":[{"request":False, "message":"Contrasena incorrecta"}],"result":""}
-            return HttpResponse(json.dumps(request_user))
+            return HttpResponse(None)
