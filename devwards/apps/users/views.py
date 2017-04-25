@@ -66,8 +66,17 @@ def UserOdooResponse(request):
         domain = [('mobile','=',req['mobile'])]
         method_name = 'search_read'
         user_odoo = call(model, method_name, domain, ['mobile','fax'])
-
-        if req['fax'] == user_odoo[0]['fax']:
-            return HttpResponse(json.dumps(user_odoo))
+        if not user_odoo:
+            return HttpResponse("401")
         else:
-            return HttpResponse(None)
+             if req['fax'] == user_odoo[0]['fax']:
+                return HttpResponse(json.dumps(user_odoo))
+             else:
+                return HttpResponse("401")
+        # if user_odoo != None:
+        #     if req['fax'] == user_odoo[0]['fax']:
+        #         return HttpResponse(json.dumps(user_odoo))
+        #     else:
+        #         return HttpResponse("401")
+        # else:
+        #     return HttpResponse("401")
