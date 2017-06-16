@@ -7,9 +7,11 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
-import json
-import functools
-import xmlrpc.client
+from apps.users import config_odoo
+import json, functools ,xmlrpc.client, datetime
+from time import gmtime, strftime
+
+
 
 
 class LogoutView(View):
@@ -44,39 +46,114 @@ class LoginView(FormView):
         login(self.request, user)
         return super(LoginView, self).form_valid(form)
 
+
 @csrf_exempt
 def UserOdooResponse(request):
-    HOST = '54.187.237.193'
-    PORT = 8069
-    DB = 'sandbox'
-    USER = 'admin'
-    PASS = '1'
-    ROOT = 'http://%s:%d/xmlrpc/' % (HOST,PORT)
+    param = config_odoo.connection()
+    req = json.loads( request.body.decode('utf-8') )
+    uid = xmlrpc.client.ServerProxy(param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
+    # Enable functions of the Odoo
+    call = functools.partial(
+        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
+        param['DB'], uid, param['PASS'])
+    model = 'res.partner'
+    domain = [('mobile','=',req['mobile'])]
+    method_name = 'search_read'
+    user_odoo = call(model, method_name, domain, ['name','fax','mobile'])
+    if not user_odoo:
+        return HttpResponse("401")
+    else:
+         print (user_odoo)
+         if req['fax'] == user_odoo[0]['fax']:
+            fecha = str(datetime.date.today())
+            market_price = call("market.price", method_name, [('date', '=', fecha)],['price_ton','date'])
+            market_usd =  call("market.usd", method_name, [('date', '=', fecha)],['date','exchange_rate'])
+            if bool(market_price) is True and bool(market_usd) is True:
+                object_respose ={
+                    'responseLogin' : {
+                        'user' : user_odoo,
+                        'marketPrice' : market_price,
+                        'market_usd' : market_usd
+                    }
+                }
+            else:
+                market_price = {}
+                market_usd = {}
+                count = 0
+                while bool(market_price) is False or bool(market_usd) is False:
+                    count = count + 1
+                    fecha = str(datetime.date.today() - datetime.timedelta(days=count))
+                    market_price = call("market.price", method_name, [('date', '=', fecha)],['price_ton','date'])
+                    market_usd =  call("market.usd", method_name, [('date', '=', fecha)],['date','exchange_rate'])
 
-    if request.method == 'POST':
 
-        req = json.loads( request.body.decode('utf-8') )
 
-        uid = xmlrpc.client.ServerProxy(ROOT + 'common').login(DB,USER,PASS)
-        # Enable functions of the OdORM
-        call = functools.partial(
-            xmlrpc.client.ServerProxy(ROOT + 'object').execute,
-            DB, uid, PASS)
-        model = 'res.partner'
-        domain = [('mobile','=',req['mobile'])]
-        method_name = 'search_read'
-        user_odoo = call(model, method_name, domain, ['mobile','fax'])
-        if not user_odoo:
+                object_respose ={
+                    'responseLogin' : {
+                        'user' : user_odoo,
+                        'marketPrice' : market_price,
+                        'market_usd' : market_usd
+                    }
+                }
+            # print (object_respose)
+            return HttpResponse(json.dumps(object_respose))
+         else:
             return HttpResponse("401")
+
+
+@csrf_exempt
+def ContratctOdooResponse(request):
+        param = config_odoo.connection()
+        req = json.loads( request.body.decode('utf-8') )
+        uid = xmlrpc.client.ServerProxy(param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
+        # Enable functions of the Odoo
+        call = functools.partial(
+            xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
+            param['DB'], uid, param['PASS'])
+        model = 'purchase.order'
+        domain = [('partner_id','=',req['name']),('state','=','approved')] #partner_id es el nombre no el id  =(
+        method_name = 'search_read'
+        contracts = call(model, method_name, domain, ['name','contract_type','date_order','state', 'partner_id'])
+
+        # print (contracts)
+        if not contracts:
+            return HttpResponse("Sin Contratos")
         else:
-             if req['fax'] == user_odoo[0]['fax']:
-                return HttpResponse(json.dumps(user_odoo))
-             else:
-                return HttpResponse("401")
-        # if user_odoo != None:
-        #     if req['fax'] == user_odoo[0]['fax']:
-        #         return HttpResponse(json.dumps(user_odoo))
-        #     else:
-        #         return HttpResponse("401")
-        # else:
-        #     return HttpResponse("401")
+            model = 'purchase.order.line'
+            model_truck = 'truck.reception'
+            model_invoice = 'account.invoice'
+            for line in contracts:
+                domain = [('order_id','=',line['id'])]
+                line_contracts = call(model, method_name, domain, ['product_id','product_qty','order_id'])
+                line['product_id'] = 0
+                line['quantity'] = 0
+                line['date_order'] = line['date_order'].split()[0]
+                line['tons_delivered'] = []
+                for ilc in line_contracts:
+                    if line['id'] == ilc['order_id'][0]:
+                        line['product_id'] = ilc['product_id'][1]
+                        line['quantity'] += ilc['product_qty']
+                #Total entregado
+                line['tons_delivered'] = getTrucks(line['id'])
+                #Total Facturado
+                # domain = [('contract_id','=',line['id']),('state','=','done')]
+                # line_truck = call(model_truck, method_name, domain, ['clean_kilos'])
+                # print (line_truck)
+                # for lt in line_truck:
+                #     line['tons_delivered'] += lt['clean_kilos'] / 1000
+            print(contracts)
+            return HttpResponse(json.dumps(contracts))
+
+
+def getTrucks(id_contract):
+    print (id_contract)
+    param = config_odoo.connection()
+    uid = xmlrpc.client.ServerProxy(param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
+    # Enable functions of the Odoo
+    call = functools.partial(
+        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
+        param['DB'], uid, param['PASS'])
+    domain =  [('contract_id','=',id_contract),('state','=','done')]
+    line = call('truck.reception', 'search_read', domain, ['stock_picking_id','clean_kilos'])
+    print (line)
+    return line
