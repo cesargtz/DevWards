@@ -4,7 +4,7 @@ def connection():
     settings = {
         'DB' : 'sandbox',
         'USER' : 'admin',
-        'PASS' : 'yKEY9099',
+        'PASS' : '1',
         'ROOT' : 'http://%s:%d/xmlrpc/' % (HOST,PORT)
     }
     return  settings

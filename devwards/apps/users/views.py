@@ -10,8 +10,7 @@ from rest_framework.parsers import JSONParser
 from apps.users import config_odoo
 import json, functools ,xmlrpc.client, datetime
 from time import gmtime, strftime
-
-
+import psycopg2
 
 
 class LogoutView(View):
@@ -128,7 +127,8 @@ def ContratctOdooResponse(request):
                 line['product_id'] = 0
                 line['quantity'] = 0
                 line['date_order'] = line['date_order'].split()[0]
-                line['tons_delivered'] = []
+                line['tons_delivered'] = 0
+                line['partner_id'] = line['partner_id'][1]
                 for ilc in line_contracts:
                     if line['id'] == ilc['order_id'][0]:
                         line['product_id'] = ilc['product_id'][1]
@@ -136,24 +136,58 @@ def ContratctOdooResponse(request):
                 #Total entregado
                 line['tons_delivered'] = getTrucks(line['id'])
                 #Total Facturado
-                # domain = [('contract_id','=',line['id']),('state','=','done')]
-                # line_truck = call(model_truck, method_name, domain, ['clean_kilos'])
-                # print (line_truck)
-                # for lt in line_truck:
-                #     line['tons_delivered'] += lt['clean_kilos'] / 1000
-            print(contracts)
+                line['Inovice'] = getInvoices(line['id'])
+                if line['Inovice']:
+                    tons_invoiced = 0
+                    for invoice in line['Inovice']:
+                        tons_invoiced += invoice['tons']
+                    line['tons_invoiced'] = tons_invoiced
             return HttpResponse(json.dumps(contracts))
 
 
 def getTrucks(id_contract):
-    print (id_contract)
     param = config_odoo.connection()
     uid = xmlrpc.client.ServerProxy(param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
     # Enable functions of the Odoo
     call = functools.partial(
         xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
         param['DB'], uid, param['PASS'])
-    domain =  [('contract_id','=',id_contract),('state','=','done')]
+    domain =  [('contract_id', '=', id_contract),('state','=','done')]
     line = call('truck.reception', 'search_read', domain, ['stock_picking_id','clean_kilos'])
-    print (line)
+    tons = 0
+    for l in line:
+        tons += l['clean_kilos'] / 1000
+    return tons
+
+def getInvoices(id_contract):
+    invoice_ids = GetIdInvRel(id_contract)
+    param = config_odoo.connection()
+    uid = xmlrpc.client.ServerProxy(param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
+    # Enable functions of the Odoo
+    call = functools.partial(
+        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
+        param['DB'], uid, param['PASS'])
+    domain =  [('id', '=', invoice_ids),('state','=',['open','paid'])]
+    line = call('account.invoice', 'search_read', domain, ['number','state','amount_total','tons','payment_ids','date_invoice'])
+    # print (line)
     return line
+
+def GetIdInvRel(id_purchase):
+    try:
+        # connect_str = "dbname='sandbox' user='odoo' host='localhost' password='odoo'"
+        conn = psycopg2.connect(dbname='sandbox', user='odoo', host='localhost', password='odoo')
+        cursor = conn.cursor()
+        cursor.execute("""SELECT * FROM purchase_invoice_rel WHERE purchase_id = %d""" % (id_purchase))
+        rows = cursor.fetchall()
+        print (rows)
+        if rows:
+            invoice_rel = []
+            for row in rows:
+                invoice_rel.append(row[1])
+            return invoice_rel
+        else:
+            return False
+    except Exception as e:
+        print("can't connect. Invalid dbname, user or password?")
+        print(e)
+        return False
