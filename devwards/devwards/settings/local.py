@@ -3,7 +3,7 @@ from .base import *
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','127.0.0.1','yecora.mx','34.210.26.151']
+ALLOWED_HOSTS = ['localhost','127.0.0.1','yecora.mx','34.210.26.151','www.yecora.mx']
 
 
 # Database
