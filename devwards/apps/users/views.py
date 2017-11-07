@@ -15,10 +15,10 @@ import json
 import functools
 import xmlrpc.client
 import datetime
-from time import gmtime, strftime
+from time import gmtime, strftime, strptime
 import psycopg2
+import requests
 from PIL import Image
-import quandl
 
 
 class LogoutView(View):
@@ -127,7 +127,7 @@ def ContratctOdooResponse(request):
         param['DB'], uid, param['PASS'])
     model = 'purchase.order'
     domain = [('partner_id', '=', req['name']), ('state', '=',
-                                                 'approved')]  # partner_id es el nombre no el id  =(
+                                                 'approved')]  # approved partner_id es el nombre no el id  =(  approved
     method_name = 'search_read'
     contracts = call(model, method_name, domain, [
                      'name', 'contract_type', 'date_order', 'state', 'partner_id'])
@@ -205,6 +205,23 @@ def getInvoices(id_contract):
             for amount in amounts:
                 amount_total += amount['debit']
         lp['payment_ids'] = amount_total
+        # # # # # # # # # # # # # #
+        conn = psycopg2.connect(dbname='sandbox', user='odoo', host='localhost', password='odoo')
+        cursor = conn.cursor()
+        cursor.execute("""SELECT * FROM account_invoice_line WHERE invoice_id = %s """ % (lp['id']))
+        rows = cursor.fetchall()
+        price_unit = 0
+        product = ""
+        for row in rows:
+            price_unit = row[8]
+            cursor.execute("""SELECT product_tmpl_id  FROM product_product WHERE id = %s """ % (row[13]))
+            product_id = cursor.fetchall()
+            cursor.execute("""SELECT name FROM product_template WHERE id = %s """ % (product_id[0]))
+            product_name = cursor.fetchall()
+            product = product_name[0][0]
+            break
+        lp['price_unit'] = float(price_unit)
+        lp['product'] = str(product)
     return line
 
 
@@ -257,8 +274,8 @@ def getClosures(id_contract):
         xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
         param['DB'], uid, param['PASS'])
 
-    line = call('pinup.price.purchase', 'search_read', [('purchase_order_id', '=', id_contract), ('state', '=', 'confirmed')], [
-                'name', 'tons_reception', 'tons_priced', 'request_date', 'set_price', 'pinup_tons'])
+    line = call('pinup.price.purchase', 'search_read', [('purchase_order_id', '=', id_contract), ('state', '=', ['invoiced','close'])], [
+                'name', 'tons_reception', 'tons_priced', 'request_date', 'price_mxn', 'pinup_tons'])
     return line
 
 
@@ -289,7 +306,7 @@ def TruckOdooResponse(request):
                     param['DB'], uid, param['PASS'])
                 domain = [('id', 'in',list_ids )]
                 line = call('truck.reception', 'search_read', domain,
-                            ['name', 'contract_id' ,'date','clean_kilos'])
+                            ['name', 'contract_id' ,'date','clean_kilos','hired','delivered','pending'])
                 for l in line:
                     l['contract_id'] = l['contract_id'][1]
                 return HttpResponse(json.dumps(line))
@@ -331,7 +348,7 @@ def truckcontractResponse(request):
         param['DB'], uid, param['PASS'])
     domain = [('contract_id', '=', req )]
     line = call('truck.reception', 'search_read', domain,
-                ['name', 'contract_id' ,'date','clean_kilos'])
+                ['name', 'contract_id' ,'date','clean_kilos','hired','delivered','pending'])
     for l in line:
         l['contract_id'] = l['contract_id'][1]
     return HttpResponse(json.dumps(line))
@@ -380,7 +397,7 @@ def newsImage(request, id):
         name = value['name']
         break
     #Dar permisos al directorio chmod
-    print("/home/odoo/.local/share/Odoo/filestore/sandbox/" + path)
+    # print("/home/odoo/.local/share/Odoo/filestore/sandbox/" + path)
     img = Image.open("/home/odoo/.local/share/Odoo/filestore/sandbox/" + path)
     # img = img.resize((100, 100))
     response = HttpResponse(content_type='image/jpg')
@@ -388,18 +405,55 @@ def newsImage(request, id):
     # response['Content-Disposition'] = 'attachment; filename=%s' % (name)
     return response
 
+@csrf_exempt
+def urlPrice(request):
+    param = config_odoo.connection()
+    req = json.loads(request.body.decode('utf-8'))
+    uid = xmlrpc.client.ServerProxy(
+        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
+    # Enable functions of the Odoo
+    call = functools.partial(
+        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
+        param['DB'], uid, param['PASS'])
+    res = call('market.base', 'search_read', [],['url_price_corn'])
+    size = len(res) - 1
+    url = res[size]['url_price_corn']
+    resp = requests.get(url + "&start_date=" + req) # yyyy-mm-dd
+    if resp.status_code != 200:
+       _logger.error("Error to get price corn to quandl")
+    response = resp.json()
+    data = response['dataset']['data']
+    date = []
+    price = []
+    for i in data:
+        date.append(i[0])
+        price.append(i[6])
+    json_array = {'pricecorn':{'date':date, 'price':price}}
+    return HttpResponse(json.dumps(json_array))
 
-def urlPrice(self):
-    mydata = quandl.get("CME/CH2018")
-    return (HttpResponse(mydata))
-    # param = config_odoo.connection()
-    # # req = json.loads(request.body.decode('utf-8'))
-    # uid = xmlrpc.client.ServerProxy(
-    #     param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    # # Enable functions of the Odoo
-    # call = functools.partial(
-    #     xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-    #     param['DB'], uid, param['PASS'])
-    # res = call('market.base', 'search_read', [],['url_price_corn'])
-    # size = len(res) - 1
-    # return(HttpResponse(res[size]['url_price_corn']))
+@csrf_exempt
+def exchange(request):
+    param = config_odoo.connection()
+    req = json.loads(request.body.decode('utf-8'))
+    uid = xmlrpc.client.ServerProxy(
+        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
+    # Enable functions of the Odoo
+    call = functools.partial(
+        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
+        param['DB'], uid, param['PASS'])
+    line = call('market.usd', 'search_read', [('date','>=', req)],
+                ['exchange_rate', 'date'])
+    return HttpResponse(json.dumps(line))
+
+@csrf_exempt
+def DetailReception(request):
+    param = config_odoo.connection()
+    req = json.loads(request.body.decode('utf-8'))
+    uid = xmlrpc.client.ServerProxy(
+        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
+    call = functools.partial(
+        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
+        param['DB'], uid, param['PASS'])
+    line = call('truck.reception', 'search_read', [('contract_id','>=', req['contract_ids']),('state','=','done')],
+            ['delivered','pending'])
+    return HttpResponse(json.dumps(line))
