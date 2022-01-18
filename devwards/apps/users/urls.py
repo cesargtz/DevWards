@@ -8,7 +8,7 @@ urlpatterns = [
     # url(r'^salir$', LogoutView.as_view(), name='logout'),
     url(r'^userodoo$', views.UserOdooResponse),
     url(r'^contractodoo$', views.ContratctOdooResponse),
-    url(r'^billsodoo$', views.BillsOdooResponse),
+    # url(r'^billsodoo$', views.BillsOdooResponse),
     url(r'^trucksodoo$', views.TruckOdooResponse),
     url(r'^truckdetailodoo$', views.TruckDetailOdooResponse),
     url(r'^truckscontract$', views.truckcontractResponse),

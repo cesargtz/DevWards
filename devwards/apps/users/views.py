@@ -10,7 +10,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
-from apps.users import config_odoo
+from .config_odoo import ConnOdoo, connection
 import json
 import functools
 import xmlrpc.client
@@ -60,27 +60,18 @@ class LoginView(FormView):
 
 @csrf_exempt
 def UserOdooResponse(request):
-    param = config_odoo.connection()
+    con = ConnOdoo()
     req = json.loads(request.body.decode('utf-8'))
-    uid = xmlrpc.client.ServerProxy(
-        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    # Enable functions of the Odoo
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-        param['DB'], uid, param['PASS'])
-    model = 'res.partner'
     domain = [('mobile', '=', req['mobile'])]
-    method_name = 'search_read'
-    user_odoo = call(model, method_name, domain, ['name', 'fax', 'mobile'])
+    fields = ['name', 'fax', 'mobile']
+    user_odoo = con.Connection('res.partner',domain,fields)
     if not user_odoo:
         return HttpResponse("401")
     else:
         if req['fax'] == user_odoo[0]['fax']:
             fecha = str(datetime.date.today())
-            market_price = call("market.price", method_name, [
-                                ('date', '=', fecha)], ['price_ton', 'date'])
-            market_usd = call("market.usd", method_name, [
-                              ('date', '=', fecha)], ['date', 'exchange_rate'])
+            market_price = con.Connection("market.price",[('date', '=', fecha)],['price_ton', 'date'])
+            market_usd = con.Connection("market.usd",[('date', '=', fecha)],['date', 'exchange_rate'])
             if bool(market_price) is True and bool(market_usd) is True:
                 object_respose = {
                     'responseLogin': {
@@ -97,11 +88,8 @@ def UserOdooResponse(request):
                     count = count + 1
                     fecha = str(datetime.date.today() -
                                 datetime.timedelta(days=count))
-                    market_price = call("market.price", method_name, [
-                                        ('date', '=', fecha)], ['price_ton', 'date'])
-                    market_usd = call("market.usd", method_name, [
-                                      ('date', '=', fecha)], ['date', 'exchange_rate'])
-
+                    market_price = con.Connection("market.price",[('date', '=', fecha)],['price_ton', 'date'])
+                    market_usd = con.Connection("market.usd",[('date', '=', fecha)],['date', 'exchange_rate'])
                 object_respose = {
                     'responseLogin': {
                         'user': user_odoo,
@@ -109,7 +97,6 @@ def UserOdooResponse(request):
                         'market_usd': market_usd
                     }
                 }
-            # print (object_respose)
             return HttpResponse(json.dumps(object_respose))
         else:
             return HttpResponse("401")
@@ -117,21 +104,11 @@ def UserOdooResponse(request):
 
 @csrf_exempt
 def ContratctOdooResponse(request):
-    param = config_odoo.connection()
+    con = ConnOdoo()
     req = json.loads(request.body.decode('utf-8'))
-    uid = xmlrpc.client.ServerProxy(
-        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    # Enable functions of the Odoo
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-        param['DB'], uid, param['PASS'])
-    model = 'purchase.order'
-    domain = [('partner_id', '=', req['name']), ('state', '=',
-                                                 'approved')]  # approved partner_id es el nombre no el id  =(  approved
-    method_name = 'search_read'
-    contracts = call(model, method_name, domain, [
-                     'name', 'contract_type', 'date_order', 'state', 'partner_id'])
-
+    domain = [('partner_id', '=', req['name']), ('state', '=','approved')]
+    fields = ['name', 'contract_type', 'date_order', 'state', 'partner_id']
+    contracts = con.Connection('purchase.order', domain, fields)
     if not contracts:
         return HttpResponse("Sin Contratos")
     else:
@@ -140,8 +117,7 @@ def ContratctOdooResponse(request):
         model_invoice = 'account.invoice'
         for line in contracts:
             domain = [('order_id', '=', line['id'])]
-            line_contracts = call(model, method_name, domain, [
-                                  'product_id', 'product_qty', 'order_id'])
+            line_contracts = con.Connection(model, domain, ['product_id', 'product_qty', 'order_id'])
             line['product_id'] = 0
             line['quantity'] = 0
             line['date_order'] = line['date_order'].split()[0]
@@ -168,16 +144,10 @@ def ContratctOdooResponse(request):
 
 
 def getTrucks(id_contract):
-    param = config_odoo.connection()
-    uid = xmlrpc.client.ServerProxy(
-        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    # Enable functions of the Odoo
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-        param['DB'], uid, param['PASS'])
+    con = ConnOdoo()
     domain = [('contract_id', '=', id_contract), ('state', '=', 'done')]
-    line = call('truck.reception', 'search_read', domain,
-                ['stock_picking_id', 'clean_kilos'])
+    fields = ['stock_picking_id', 'clean_kilos']
+    line = con.Connection('truck.reception', domain, fields)
     tons = 0
     for l in line:
         tons += l['clean_kilos'] / 1000
@@ -186,21 +156,14 @@ def getTrucks(id_contract):
 
 def getInvoices(id_contract):
     invoice_ids = GetIdInvRel(id_contract)
-    param = config_odoo.connection()
-    uid = xmlrpc.client.ServerProxy(
-        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    # Enable functions of the Odoo
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-        param['DB'], uid, param['PASS'])
+    con = ConnOdoo()
     domain = [('id', '=', invoice_ids), ('state', '=', ['open', 'paid'])]
-    line = call('account.invoice', 'search_read', domain, [
+    line = con.Connection('account.invoice', domain, [
                 'number', 'state', 'amount_total', 'tons', 'payment_ids', 'date_invoice', 'supplier_invoice_number'])
     amount_total = 0
     for lp in line:
         for pay in lp['payment_ids']:
-            amounts = call('account.move.line', 'search_read',
-                           [('id', '=', pay)], ['debit'])
+            amounts = con.Connection('account.move.line',[('id', '=', pay)], ['debit'])
             amount_total = 0
             for amount in amounts:
                 amount_total += amount['debit']
@@ -246,48 +209,29 @@ def GetIdInvRel(id_purchase):
         return False
 
 
-@csrf_exempt
-def BillsOdooResponse(request):
-    param = config_odoo.connection()
-    req = json.loads(request.body.decode('utf-8'))
-    uid = xmlrpc.client.ServerProxy(
-        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    # Enable functions of the Odoo
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-        param['DB'], uid, param['PASS'])
-    model = 'purchase.order'
-    domain = [('partner_id', '=', req['name']), ('state', '=',
-                                                 'approved')]  # partner_id es el nombre no el id  =(
-    method_name = 'search_read'
-    contracts = call(model, method_name, domain, [
-                     'name', 'contract_type', 'date_order', 'state', 'partner_id'])
-    pass
+# @csrf_exempt
+# def BillsOdooResponse(request):
+#     con = ConnOdoo()
+#     model = 'purchase.order'
+#     domain = [('partner_id', '=', req['name']), ('state', '=','approved')]  # partner_id es el nombre no el id
+#     contracts = con.connection(model, domain, ['name', 'contract_type', 'date_order', 'state', 'partner_id'])
 
 
 def getClosures(id_contract):
-    param = config_odoo.connection()
-    uid = xmlrpc.client.ServerProxy(
-        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    # Enable functions of the Odoo
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-        param['DB'], uid, param['PASS'])
-
-    line = call('pinup.price.purchase', 'search_read', [('purchase_order_id', '=', id_contract), ('state', '=', ['invoiced','close'])], [
-                'name', 'tons_reception', 'tons_priced', 'request_date', 'price_mxn', 'pinup_tons'])
+    con = ConnOdoo()
+    line = con.Connection('pinup.price.purchase', [('purchase_order_id', '=', id_contract), ('state', '=', ['invoiced','close'])],
+            [ 'name', 'tons_reception', 'tons_priced', 'request_date', 'price_mxn', 'pinup_tons'])
     return line
 
 
 @csrf_exempt
 # necesitamos un offset que indica cuantos registros va a ignorar  y un
 # feth que seran cuantos mas va a buscar osea 10
-
 def TruckOdooResponse(request):
     try:
-        param = config_odoo.connection()
+        con = ConnOdoo()
         req = json.loads(request.body.decode('utf-8'))
-        if req['idsContract']:
+        if req['idsContract'] is not None:
             conn = psycopg2.connect(
                 dbname='sandbox', user='odoo', host='localhost', password='odoo')
             cursor = conn.cursor()
@@ -298,14 +242,8 @@ def TruckOdooResponse(request):
             for row in rows:
                 list_ids.append(str(row[0]))
             if list_ids:
-                uid = xmlrpc.client.ServerProxy(
-                    param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-                # Enable functions of the Odoo
-                call = functools.partial(
-                    xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-                    param['DB'], uid, param['PASS'])
                 domain = [('id', 'in',list_ids )]
-                line = call('truck.reception', 'search_read', domain,
+                line = con.Connection('truck.reception', domain,
                             ['name', 'contract_id' ,'date','clean_kilos','hired','delivered','pending'])
                 for l in line:
                     l['contract_id'] = l['contract_id'][1]
@@ -321,16 +259,9 @@ def TruckOdooResponse(request):
 
 @csrf_exempt
 def TruckDetailOdooResponse(request):
-    param = config_odoo.connection()
+    con = ConnOdoo()
     req = json.loads(request.body.decode('utf-8'))
-    uid = xmlrpc.client.ServerProxy(
-        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    # Enable functions of the Odoo
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-        param['DB'], uid, param['PASS'])
-    domain = [('id', '=', req )]
-    line = call('truck.reception', 'search_read', domain,
+    line = con.Connection('truck.reception', [('id', '=', req )],
                 ['name', 'contract_id' ,'date','clean_kilos','partner_id','driver','car_plates','hired','delivered','pending',
                 'humidity_rate','density','temperature','damage_rate','break_rate','impurity_rate','input_kilos','output_kilos','raw_kilos',
                 'broken_kilos', 'impure_kilos', 'damaged_kilos','humid_kilos'])
@@ -338,16 +269,9 @@ def TruckDetailOdooResponse(request):
 
 @csrf_exempt
 def truckcontractResponse(request):
-    param = config_odoo.connection()
+    con = ConnOdoo()
     req = json.loads(request.body.decode('utf-8'))
-    uid = xmlrpc.client.ServerProxy(
-        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    # Enable functions of the Odoo
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-        param['DB'], uid, param['PASS'])
-    domain = [('contract_id', '=', req )]
-    line = call('truck.reception', 'search_read', domain,
+    line = con.Connection('truck.reception', [('contract_id', '=', req )],
                 ['name', 'contract_id' ,'date','clean_kilos','hired','delivered','pending'])
     for l in line:
         l['contract_id'] = l['contract_id'][1]
@@ -356,7 +280,6 @@ def truckcontractResponse(request):
 @csrf_exempt
 def newsYecora(request):
     try:
-        param = config_odoo.connection()
         req = json.loads(request.body.decode('utf-8'))
         conn = psycopg2.connect(
             dbname='sandbox', user='odoo', host='localhost', password='odoo')
@@ -380,16 +303,9 @@ def newsYecora(request):
 
 @csrf_exempt
 def newsImage(request, id):
-    param = config_odoo.connection()
-    # req = json.loads(request.body.decode('utf-8'))
-    uid = xmlrpc.client.ServerProxy(
-        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    # Enable functions of the Odoo
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-        param['DB'], uid, param['PASS'])
+    con = ConnOdoo()
     domain = [('res_model', '=', 'news.app' ),('res_id', '=', id)]
-    res = call('ir.attachment', 'search_read', domain,['store_fname','name'])
+    res = con.Connection('ir.attachment', domain, ['store_fname','name'])
     path = False
     name = False
     for value in res:
@@ -407,15 +323,9 @@ def newsImage(request, id):
 
 @csrf_exempt
 def urlPrice(request):
-    param = config_odoo.connection()
+    con = ConnOdoo()
     req = json.loads(request.body.decode('utf-8'))
-    uid = xmlrpc.client.ServerProxy(
-        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    # Enable functions of the Odoo
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-        param['DB'], uid, param['PASS'])
-    res = call('market.base', 'search_read', [],['url_price_corn'])
+    res = con.Connection('market.base',[],['url_price_corn'])
     size = len(res) - 1
     url = res[size]['url_price_corn']
     resp = requests.get(url + "&start_date=" + req) # yyyy-mm-dd
@@ -433,27 +343,14 @@ def urlPrice(request):
 
 @csrf_exempt
 def exchange(request):
-    param = config_odoo.connection()
+    con = ConnOdoo()
     req = json.loads(request.body.decode('utf-8'))
-    uid = xmlrpc.client.ServerProxy(
-        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    # Enable functions of the Odoo
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-        param['DB'], uid, param['PASS'])
-    line = call('market.usd', 'search_read', [('date','>=', req)],
-                ['exchange_rate', 'date'])
+    line = con.Connection('market.usd', [('date','>=', req)],['exchange_rate', 'date'])
     return HttpResponse(json.dumps(line))
 
 @csrf_exempt
 def DetailReception(request):
-    param = config_odoo.connection()
+    con = ConnOdoo()
     req = json.loads(request.body.decode('utf-8'))
-    uid = xmlrpc.client.ServerProxy(
-        param['ROOT'] + 'common').login(param['DB'], param['USER'], param['PASS'])
-    call = functools.partial(
-        xmlrpc.client.ServerProxy(param['ROOT'] + 'object').execute,
-        param['DB'], uid, param['PASS'])
-    line = call('truck.reception', 'search_read', [('contract_id','>=', req['contract_ids']),('state','=','done')],
-            ['delivered','pending'])
+    line = con.Connection('truck.reception', [('contract_id','>=', req['contract_ids']),('state','=','done')],['delivered','pending'])
     return HttpResponse(json.dumps(line))
